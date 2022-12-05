@@ -67,7 +67,7 @@ docker run --name grafana \
 
     ```sh
     work_dir=`pwd`
-    trace_data=~/.ros/tracing/autoware_launch_trace_yyyymmdd-hhmmss
+    trace_data=~/.ros/tracing/session-yyyymmdd-hhmmss
     docker run -it --rm \
       --net host \
       -v ${work_dir}:/work \
@@ -80,7 +80,7 @@ docker run --name grafana \
   - b. Run the script locally
 
     ```sh
-    python3 caret2influxdb.py ~/.ros/tracing/autoware_launch_trace_yyyymmdd-hhmmss
+    python3 caret2influxdb.py ~/.ros/tracing/session-yyyymmdd-hhmmss
     ```
 
 3. Setup Grafana

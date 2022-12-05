@@ -10,6 +10,7 @@ import argparse
 import logging
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 import influxdb_client
 
@@ -40,6 +41,32 @@ def write_df(url, token, org, bucket_name, measurement_name, df, component_name,
         write_api.write(bucket=bucket_name, record=df, data_frame_measurement_name=measurement_name)
 
 
+def write_df_history(url, token, org, bucket_name, measurement_datetime, measurement_name, df: pd.DataFrame, component_name, node_name, callback_name):
+    metrics = df.columns[0]
+    df = df[1:-2]
+    if len(df) < 2:
+        return
+    with influxdb_client.InfluxDBClient(url=url, token=token, org=org) as client:
+        point_settings = influxdb_client.client.write_api.PointSettings()
+        write_api = client.write_api(write_options=influxdb_client.client.write_api.SYNCHRONOUS, point_settings=point_settings)
+
+        p = influxdb_client.Point('product_a')\
+            .tag('relese_tag', 'v1.0.0')\
+            .tag('relese_date', '2022/12/05')\
+            .tag('environment', 'sim')\
+            .tag('measurement_name', measurement_name)\
+            .tag('component_name', component_name)\
+            .tag('node_name', node_name)\
+            .tag('callback_name', callback_name)\
+            .tag('type', 'avg')\
+            .time(measurement_datetime)
+
+        write_api.write(bucket=bucket_name, record=p.field(metrics, float(df.mean())).tag('type', 'avg'))
+        write_api.write(bucket=bucket_name, record=p.field(metrics, float(df.median())).tag('type', 'median'))
+        write_api.write(bucket=bucket_name, record=p.field(metrics, float(df.min())).tag('type', 'min'))
+        write_api.write(bucket=bucket_name, record=p.field(metrics, float(df.max())).tag('type', 'max'))
+
+
 def make_callback_name(callback: CallbackBase) -> str:
     """Make callback name to be displayed"""
     callback_type = callback.callback_type.type_name
@@ -54,16 +81,18 @@ def make_callback_name(callback: CallbackBase) -> str:
     return displayname
 
 
-def convert(app: Application, url, token, org, bucket_name, measurement_name):
+def convert(app: Application, url, token, org, bucket_name, measurement_name, measurement_datetime):
     """Analyze nodes"""
     global _logger
     _logger.info('<<< Convert: Start >>>')
 
     create_bucket(url, token, org, bucket_name)
+    create_bucket(url, token, org, 'history')
 
     all_metrics_dict = {'Frequency [Hz]': Plot.create_callback_frequency_plot,
                         'Period [ms]': Plot.create_callback_period_plot,
                         'Latency [ms]': Plot.create_callback_latency_plot}
+
     for node in app.nodes:
         node_name = node.node_name
         component_name = node_name.lstrip('/').split('/')[0]
@@ -82,6 +111,7 @@ def convert(app: Application, url, token, org, bucket_name, measurement_name):
                 df = df.set_index(df.columns[0])
                 df.columns = [metrics]
                 write_df(url, token, org, bucket_name, measurement_name, df, component_name, node_name, callback_name)
+                write_df_history(url, token, org, 'history', measurement_datetime, measurement_name, df, component_name, node_name, callback_name)
 
     _logger.info('<<< Convert: Finish >>>')
 
@@ -107,6 +137,8 @@ def parse_arg():
                         help='InfluxDB Bucket Name')
     parser.add_argument('--measurement_name', type=str, default=None,
                         help='InfluxDB measurement Name')
+    parser.add_argument('--measurement_datetime', type=str, default=datetime.now(),
+                        help='InfluxDB measurement datetime')
     parser.add_argument('-v', '--verbose', action='store_true', default=False)
     args = parser.parse_args()
     return args
@@ -122,17 +154,19 @@ def main():
     _logger.debug(f'start_point: {args.start_point}, duration: {args.duration}')
     _logger.debug(f'url: {args.url}, token: {args.token}, org: {args.org}')
 
-    bucket_name = args.bucket_name if args.bucket_name is not None else 'autoware'
+    bucket_name = args.bucket_name if args.bucket_name is not None else 'caret'
     measurement_name = args.measurement_name if args.measurement_name is not None \
         else args.trace_data[0].rstrip('/').split('/')[-1]
-    measurement_name = measurement_name.replace('-', '_')
     _logger.debug(f'bucket_name: {bucket_name}, measurement_name: {measurement_name}')
+
+    measurement_datetime = int(args.measurement_datetime.timestamp() * 1e9)
+    _logger.debug(f'measurement_datetime: {args.measurement_datetime}, {measurement_datetime}')
 
     lttng = utils.read_trace_data(args.trace_data[0], args.start_point, args.duration, False)
     arch = Architecture('lttng', str(args.trace_data[0]))
     app = Application(arch, lttng)
 
-    convert(app, args.url, args.token, args.org, bucket_name, measurement_name)
+    convert(app, args.url, args.token, args.org, bucket_name, measurement_name, measurement_datetime)
 
 
 if __name__ == '__main__':

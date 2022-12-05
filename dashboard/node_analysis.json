@@ -150,8 +150,8 @@
       {
         "current": {
           "selected": false,
-          "text": "autoware",
-          "value": "autoware"
+          "text": "caret",
+          "value": "caret"
         },
         "datasource": {
           "type": "influxdb",
