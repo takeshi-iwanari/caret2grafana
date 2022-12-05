@@ -1,0 +1,49 @@
+from(bucket: "${bucket_name}")
+  |> range(start: 0, stop: now())
+  |> filter(fn: (r) => r._measurement == "${metrics}")
+  |> filter(fn: (r) => r.component_name == "${component_name}")
+//  |> filter(fn: (r) => r.node_name == "${node_name}")
+  |> filter(fn: (r) => r.node_name =~ /^${node_name:regex}$/) 
+  |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+  |> drop(columns: ["_start", "_stop", "component_name"])
+
+from(bucket: "${bucket_name}")
+  |> range(start: 0, stop: now())
+  |> filter(fn: (r) => r._measurement == "${metrics}")
+  |> filter(fn: (r) => r.component_name == "${component_name}")
+  |> filter(fn: (r) => r.node_name =~ /^${node_name:regex}$/) 
+  |> filter(fn: (r) => r.callback_name == "${callback_name}") 
+  |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+  |> drop(columns: ["_start", "_stop", "component_name"])
+
+bucket_name
+buckets()
+  |> drop(columns: ["_monitoring", "_tasks"])
+
+metrics
+Custom
+Frequency, Period, Latency
+
+component_name
+Custome
+sensing, localization, perception, planning, control, system
+
+node_name
+import "influxdata/influxdb/schema"
+schema.tagValues(
+  bucket: "${bucket_name}",
+  tag: "node_name",
+  start: 0,
+  stop: now(),
+  predicate: (r) => r.component_name == "${component_name}",
+)
+
+callback_name
+import "influxdata/influxdb/schema"
+schema.tagValues(
+  bucket: "${bucket_name}",
+  tag: "callback_name",
+  start: 0,
+  stop: now(),
+  predicate: (r) => r.node_name =~ /^${node_name:regex}$/,
+)
