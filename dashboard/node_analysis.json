@@ -24,13 +24,29 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 3,
+  "id": 5,
   "links": [],
   "liveNow": false,
   "panels": [
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 6,
+      "panels": [],
+      "repeat": "node_name",
+      "repeatDirection": "h",
+      "title": "${node_name}",
+      "type": "row"
+    },
+    {
       "datasource": {
-        "type": "influxdb"
+        "type": "influxdb",
+        "uid": null
       },
       "fieldConfig": {
         "defaults": {
@@ -88,11 +104,12 @@
       },
       "gridPos": {
         "h": 12,
-        "w": 12,
+        "w": 8,
         "x": 0,
-        "y": 0
+        "y": 1
       },
       "id": 2,
+      "maxPerRow": 3,
       "options": {
         "legend": {
           "calcs": [
@@ -109,83 +126,19 @@
           "sort": "none"
         }
       },
+      "repeat": "metrics",
+      "repeatDirection": "h",
       "targets": [
         {
           "datasource": {
             "type": "influxdb"
           },
-          "query": "from(bucket: \"${bucket_name}\")\r\n  |> range(start: 0, stop: now())\r\n  |> filter(fn: (r) => r._measurement == \"${measurement}\")\r\n  |> filter(fn: (r) => r.component_name == \"${component_name}\")\r\n//  |> filter(fn: (r) => r.node_name == \"${node_name}\")\r\n  |> filter(fn: (r) => r.node_name =~ /^${node_name:regex}$/) \r\n  |> filter(fn: (r) => r._field == \"${metrics}\") \r\n//  |> pivot(rowKey:[\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\r\n//  |> drop(columns: [\"_start\", \"_stop\", \"component_name\"])",
+          "query": "from(bucket: \"${bucket_name}\")\r\n  |> range(start: 0, stop: now())\r\n  |> filter(fn: (r) => r._measurement == \"${measurement}\")\r\n  |> filter(fn: (r) => r.component_name == \"${component_name}\")\r\n  |> filter(fn: (r) => r.node_name == \"${node_name}\")\r\n//  |> filter(fn: (r) => r.node_name =~ /^${node_name:regex}$/) \r\n  |> filter(fn: (r) => r._field == \"${metrics}\") \r\n//  |> pivot(rowKey:[\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\r\n//  |> drop(columns: [\"_start\", \"_stop\", \"component_name\"])",
           "refId": "A"
         }
       ],
       "title": "${node_name} : ${metrics}",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "influxdb"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1
-          },
-          "displayName": "${__field.labels.callback_name}",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 12,
-        "w": 12,
-        "x": 12,
-        "y": 0
-      },
-      "id": 4,
-      "options": {
-        "bucketOffset": 0,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb"
-          },
-          "query": "from(bucket: \"${bucket_name}\")\r\n  |> range(start: 0, stop: now())\r\n  |> filter(fn: (r) => r._measurement == \"${measurement}\")\r\n  |> filter(fn: (r) => r.component_name == \"${component_name}\")\r\n//  |> filter(fn: (r) => r.node_name == \"${node_name}\")\r\n  |> filter(fn: (r) => r.node_name =~ /^${node_name:regex}$/) \r\n  |> filter(fn: (r) => r._field == \"${metrics}\") \r\n//  |> pivot(rowKey:[\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\r\n//  |> drop(columns: [\"_start\", \"_stop\", \"component_name\"])",
-          "refId": "A"
-        }
-      ],
-      "title": "${node_name} : ${metrics}",
-      "type": "histogram"
     }
   ],
   "refresh": false,
@@ -242,9 +195,13 @@
       },
       {
         "current": {
-          "selected": false,
-          "text": "Frequency [Hz]",
-          "value": "Frequency [Hz]"
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": {
           "type": "influxdb",
@@ -252,8 +209,8 @@
         },
         "definition": "import \"influxdata/influxdb/schema\"\nschema.fieldKeys(bucket: \"${bucket_name}\",\n  start: 0,\n  stop: now()\n)\n",
         "hide": 0,
-        "includeAll": false,
-        "multi": false,
+        "includeAll": true,
+        "multi": true,
         "name": "metrics",
         "options": [],
         "query": "import \"influxdata/influxdb/schema\"\nschema.fieldKeys(bucket: \"${bucket_name}\",\n  start: 0,\n  stop: now()\n)\n",
@@ -289,8 +246,12 @@
       {
         "current": {
           "selected": true,
-          "text": "/sensing/lidar/concatenate_data",
-          "value": "/sensing/lidar/concatenate_data"
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": {
           "type": "influxdb",
@@ -298,8 +259,8 @@
         },
         "definition": "import \"influxdata/influxdb/schema\"\r\nschema.tagValues(\r\n  bucket: \"${bucket_name}\",\r\n  tag: \"node_name\",\r\n  start: 0,\r\n  stop: now(),\r\n  predicate: (r) => r.component_name == \"${component_name}\",\r\n)",
         "hide": 0,
-        "includeAll": false,
-        "multi": false,
+        "includeAll": true,
+        "multi": true,
         "name": "node_name",
         "options": [],
         "query": "import \"influxdata/influxdb/schema\"\r\nschema.tagValues(\r\n  bucket: \"${bucket_name}\",\r\n  tag: \"node_name\",\r\n  start: 0,\r\n  stop: now(),\r\n  predicate: (r) => r.component_name == \"${component_name}\",\r\n)",
@@ -317,8 +278,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Single Node",
-  "uid": "konlr0KVk",
+  "title": "Node Analysis",
+  "uid": "konlr0KVe",
   "version": 2,
   "weekStart": ""
 }
