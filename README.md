@@ -100,3 +100,36 @@ docker run --name grafana \
       - Select  `./dashboard/single_node.json`
       - Click `Import`
 
+## Scheme
+
+### Node Analysis
+
+- bucket: "autoware" or product name
+- measurement: LTTng trace data name (some name for a experiment/measurement)
+- tag
+  - component_name
+  - node_name
+  - callback_name
+- field
+  - frequency
+  - period
+  - latency
+- time: datetime of tracepoint
+
+### History Information
+
+- bucket: "history"
+- measurement: "autoware" or product name
+- tag
+  - measurement info: tag
+  - measurement info: release data
+  - measurement info: environment (sim, car, etc/)
+  - component_name
+  - node_name
+  - callback_name
+  - type: avg, median, min, mx, min_90%, max_90%, min_95%, max_95%
+- field
+  - frequency
+  - period
+  - latency
+- time: datetime of measurement
