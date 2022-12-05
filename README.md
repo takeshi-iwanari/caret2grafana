@@ -66,14 +66,14 @@ docker run --name grafana \
   - a. Use the above Docker container
 
     ```sh
-    export work_dir=`pwd`
-    export trace_data=~/.ros/tracing/autoware_launch_trace_yyyymmdd-hhmmss
+    work_dir=`pwd`
+    trace_data=~/.ros/tracing/autoware_launch_trace_yyyymmdd-hhmmss
     docker run -it --rm \
       --net host \
       -v ${work_dir}:/work \
       -v ${trace_data}:/trace_data \
       -v /etc/localtime:/etc/localtime:ro \
-      -e bucket_name=`basename ${trace_data}` \
+      -e measurement_name=`basename ${trace_data}` \
       caret/caret2influxdb
     ```
 
@@ -86,7 +86,7 @@ docker run --name grafana \
 3. Setup Grafana
   - Login to Grafana
   - Configure datasource
-    - `Configuration` -> `Data Sources` -> `Add datasource`
+    - `Configuration` -> `Data sources` -> `Add data source`
     - Select `InfluxDB`, and process the following settings, then click `Save & Test`
       - Query Language: Flux
       - URL: http://localhost:8086

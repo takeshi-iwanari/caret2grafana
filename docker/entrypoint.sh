@@ -7,6 +7,6 @@ set -e
 
 cd /work
 
-python3 caret2influxdb.py /trace_data --bucket_name "${bucket_name}"
+python3 caret2influxdb.py /trace_data -v --measurement_name "${measurement_name}"
 
 exec "$@"

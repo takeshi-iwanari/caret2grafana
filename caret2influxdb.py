@@ -2,6 +2,7 @@
 Script to convert CARET to InfluxDB
 """
 from __future__ import annotations
+from typing import Optional
 import sys
 import os
 from pathlib import Path
@@ -29,10 +30,8 @@ def create_bucket(url, token, org, bucket_name: str):
         _ = buckets_api.create_bucket(bucket_name=bucket_name, org=org)
 
 
-def write_df(url, token, org, bucket_name, df, measurement_name, component_name, node_name, callback_name):
+def write_df(url, token, org, bucket_name, measurement_name, df, component_name, node_name, callback_name):
     with influxdb_client.InfluxDBClient(url=url, token=token, org=org) as client:
-        '''DBのデータをwriteする
-        tagはオプショナル'''
         point_settings = influxdb_client.client.write_api.PointSettings()
         point_settings.add_default_tag('component_name', component_name)
         point_settings.add_default_tag('node_name', node_name)
@@ -55,16 +54,16 @@ def make_callback_name(callback: CallbackBase) -> str:
     return displayname
 
 
-def convert(app: Application, url, token, org, bucket_name):
+def convert(app: Application, url, token, org, bucket_name, measurement_name):
     """Analyze nodes"""
     global _logger
     _logger.info('<<< Convert: Start >>>')
 
     create_bucket(url, token, org, bucket_name)
 
-    all_metrics_dict = {'Frequency': Plot.create_callback_frequency_plot,
-                        'Period': Plot.create_callback_period_plot,
-                        'Latency': Plot.create_callback_latency_plot}
+    all_metrics_dict = {'Frequency [Hz]': Plot.create_callback_frequency_plot,
+                        'Period [ms]': Plot.create_callback_period_plot,
+                        'Latency [ms]': Plot.create_callback_latency_plot}
     for node in app.nodes:
         node_name = node.node_name
         component_name = node_name.lstrip('/').split('/')[0]
@@ -78,10 +77,11 @@ def convert(app: Application, url, token, org, bucket_name):
                     print(f'Not called: {node_name}: {callback_name}')
                     continue
                 multi_index_name = df.columns[0][0]
-                df = df[multi_index_name]
+                df = df[multi_index_name]    # collapse multi index structure
                 # df[df.columns[0]] = pd.to_datetime(df[df.columns[0]])
                 df = df.set_index(df.columns[0])
-                write_df(url, token, org, bucket_name, df, metrics, component_name, node_name, callback_name)
+                df.columns = [metrics]
+                write_df(url, token, org, bucket_name, measurement_name, df, component_name, node_name, callback_name)
 
     _logger.info('<<< Convert: Finish >>>')
 
@@ -105,6 +105,8 @@ def parse_arg():
                         help='InfluxDB Organization')
     parser.add_argument('--bucket_name', type=str, default=None,
                         help='InfluxDB Bucket Name')
+    parser.add_argument('--measurement_name', type=str, default=None,
+                        help='InfluxDB measurement Name')
     parser.add_argument('-v', '--verbose', action='store_true', default=False)
     args = parser.parse_args()
     return args
@@ -120,12 +122,17 @@ def main():
     _logger.debug(f'start_point: {args.start_point}, duration: {args.duration}')
     _logger.debug(f'url: {args.url}, token: {args.token}, org: {args.org}')
 
+    bucket_name = args.bucket_name if args.bucket_name is not None else 'autoware'
+    measurement_name = args.measurement_name if args.measurement_name is not None \
+        else args.trace_data[0].rstrip('/').split('/')[-1]
+    measurement_name = measurement_name.replace('-', '_')
+    _logger.debug(f'bucket_name: {bucket_name}, measurement_name: {measurement_name}')
+
     lttng = utils.read_trace_data(args.trace_data[0], args.start_point, args.duration, False)
     arch = Architecture('lttng', str(args.trace_data[0]))
     app = Application(arch, lttng)
 
-    bucket_name = args.bucket_name if args.bucket_name is not None else args.trace_data[0].rstrip('/').split('/')[-1]
-    convert(app, args.url, args.token, args.org, bucket_name)
+    convert(app, args.url, args.token, args.org, bucket_name, measurement_name)
 
 
 if __name__ == '__main__':
